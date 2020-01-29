@@ -15,11 +15,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
-#include <stdarg.h>
 #include <cmocka.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 struct state {
     struct ly_ctx *ctx;
@@ -40,7 +39,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(NULL, 0);
+    st->ctx = ly_ctx_new(NULL);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;

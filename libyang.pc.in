@@ -1,7 +1,6 @@
 prefix=@CMAKE_INSTALL_PREFIX@
-exec_prefix=@CMAKE_INSTALL_PREFIX@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
-libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 
 Name: @PROJECT_NAME@
 Description: @LIBYANG_DESCRIPTION@
@@ -10,5 +9,3 @@ Requires.private: libpcre
 Libs: -L${libdir} -lyang
 Libs.private: -lpcre
 Cflags: -I${includedir}
-
-LIBYANG_SOVERSION=@LIBYANG_SOVERSION_FULL@

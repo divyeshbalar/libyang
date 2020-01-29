@@ -17,13 +17,12 @@
 #include <setjmp.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdarg.h>
 #include <cmocka.h>
 #include <string.h>
 #include <sys/wait.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 #define TEST_DIR "sec9_4_4"
 #define TEST_NAME test_sec7_9_4_4
@@ -49,7 +48,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
+    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;
@@ -122,12 +121,6 @@ TEST_STRING_LENGTH(void **state)
             }
 
             schema_format = LYS_IN_YIN;
-            ly_ctx_destroy(st->ctx, NULL);
-            st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
-            if (!st->ctx) {
-                fprintf(stderr, "Failed to create context.\n");
-                fail();
-            }
         } else {
             /* remove the modules */
             for (j = 0; j < TEST_SCHEMA_COUNT; ++j) {

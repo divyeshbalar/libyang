@@ -17,12 +17,11 @@
 #include <setjmp.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdarg.h>
 #include <cmocka.h>
 #include <string.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 #define TEST_DIR "sec6_1_3"
 #define TEST_NAME test_sec6_1_3
@@ -46,7 +45,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(NULL, 0);
+    st->ctx = ly_ctx_new(NULL);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;
@@ -76,7 +75,7 @@ TEST_QUOTING(void **state)
     const struct lys_module *mod;
     char *dsc="Test for special characters: { } ; space /* multiple\nline comment */ // comment";
     char *ref="Test for special characters: { } ; space /* multiple line comment */ // comment";
-    char *contact="\"\" \\\\ \\  \n\t  \\n\\t ";
+    char *contact="\"\" \\\\ \\ \n\t  \\n\\t ";
 
     sprintf(buf, TESTS_DIR "/conformance/" TEST_DIR "/mod1.yang");
     mod = lys_parse_path(st->ctx, buf, TEST_SCHEMA_FORMAT);
@@ -84,26 +83,6 @@ TEST_QUOTING(void **state)
     assert_string_equal(mod->dsc, dsc);
     assert_string_equal(mod->ref, ref);
     assert_string_equal(mod->org, dsc);
-    assert_string_equal(mod->contact, contact);
-}
-
-static void
-TEST_ESCAPE_CHARACTER_IN_DOUBLE_QUOTING(void **state)
-{
-    struct state *st = (*state);
-    char buf[1024];
-    const struct lys_module *mod;
-    char *dsc="a\n b";
-    char *ref="a\t\n\tb";
-    char *org="a\t  \t\n  \t\tb";
-    char *contact="a  \t\t\n\tb";
-
-    sprintf(buf, TESTS_DIR "/conformance/" TEST_DIR "/mod5.yang");
-    mod = lys_parse_path(st->ctx, buf, TEST_SCHEMA_FORMAT);
-    assert_ptr_not_equal(mod, NULL);
-    assert_string_equal(mod->dsc, dsc);
-    assert_string_equal(mod->ref, ref);
-    assert_string_equal(mod->org, org);
     assert_string_equal(mod->contact, contact);
 }
 
@@ -144,7 +123,6 @@ main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(TEST_QUOTING, setup_f, teardown_f),
-        cmocka_unit_test_setup_teardown(TEST_ESCAPE_CHARACTER_IN_DOUBLE_QUOTING, setup_f, teardown_f),
         cmocka_unit_test_setup_teardown(TEST_DOUBLE_QUOTING, setup_f, teardown_f),
         cmocka_unit_test_setup_teardown(TEST_ILLEGAL_STRING, setup_f, teardown_f),
     };

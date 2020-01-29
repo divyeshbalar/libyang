@@ -15,11 +15,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
-#include <stdarg.h>
 #include <cmocka.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 struct state {
     struct ly_ctx *ctx;
@@ -39,7 +38,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(NULL, 0);
+    st->ctx = ly_ctx_new(NULL);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         goto error;
@@ -100,44 +99,12 @@ test_default_int(void **state)
     st->dt = lyd_parse_mem(st->ctx, xml2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_INVAL);
-    assert_string_equal(ly_errmsg(st->ctx), "Invalid value \"0xa\" in \"a\" element.");
+    assert_int_equal(ly_vecode, LYVE_INVAL);
+    assert_string_equal(ly_errmsg(), "Invalid value \"0xa\" in \"a\" element.");
 
     st->dt = lyd_parse_mem(st->ctx, xml1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
     assert_string_equal(((struct lyd_node_leaf_list *)st->dt)->value_str, "12");
-}
-
-
-/*
- * Sometimes the default isn't stored in canonical form, so this ensures the default
- * value is populated properly anyways
- */
-static void
-test_default_int_trusted(void **state)
-{
-    struct state *st = (*state);
-    ly_ctx_destroy(st->ctx, NULL);
-    st->ctx = ly_ctx_new(NULL, LY_CTX_TRUSTED);
-
-    const char *yang = "module x {"
-                    "  namespace urn:x;"
-                    "  prefix x;"
-                    "  leaf a { type int8; default 10; }"  // decimal (10)
-                    "  leaf b { type int8; default 012; }" // octal (10)
-                    "  leaf c { type int8; default 0xa; }" // hexadecimal (10)
-                    "}";
-    const char *xml1 = "<a xmlns=\"urn:x\">12</a>";
-    const struct lys_module *mod;
-
-    mod = lys_parse_mem(st->ctx, yang, LYS_IN_YANG);
-    assert_ptr_not_equal(mod, NULL);
-
-    st->dt = lyd_parse_mem(st->ctx, xml1, LYD_XML, LYD_OPT_CONFIG);
-    assert_ptr_not_equal(st->dt, NULL);
-    assert_string_equal(((struct lyd_node_leaf_list *)st->dt)->value_str, "12");
-
-    assert_int_equal(lyd_validate(&st->dt, LYD_OPT_CONFIG, st->ctx), EXIT_SUCCESS);
 }
 
 /*
@@ -326,7 +293,7 @@ test_validate_value(void **state)
 {
     struct state *st = (*state);
     const struct lys_module *mod;
-    struct lys_node *node;
+    struct lys_node *a, *b, *c;
     const char *yang = "module x {"
                     "  namespace urn:x;"
                     "  prefix x;"
@@ -351,174 +318,41 @@ test_validate_value(void **state)
                     "      enum alfa;"
                     "    }"
                     "  }"
-                    "  leaf d {"
-                    "    type decimal64 {"
-                    "      fraction-digits 1;"
-                    "    }"
-                    "  }"
-                    "  leaf e {"
-                    "    type decimal64 {"
-                    "      fraction-digits 10;"
-                    "    }"
-                    "  }"
-                    "  leaf f {"
-                    "    type decimal64 {"
-                    "      fraction-digits 18;"
-                    "    }"
-                    "  }"
                     "}";
 
     mod = lys_parse_mem(st->ctx, yang, LYS_IN_YANG);
     assert_ptr_not_equal(mod, NULL);
 
-    /* a */
-    node = mod->data->next;
-    assert_int_equal(lyd_validate_value(node, NULL), EXIT_FAILURE); /* empty string is too short */
-    assert_int_equal(lyd_validate_value(node, "a"), EXIT_FAILURE); /* a is still too short */
-    assert_int_equal(lyd_validate_value(node, "bbb"), EXIT_FAILURE); /* does not match the pattern */
-    assert_int_equal(lyd_validate_value(node, "aaaaa"), EXIT_FAILURE); /* too long */
-    assert_int_equal(lyd_validate_value(node, "aaa"), EXIT_SUCCESS); /* ok */
+    a = mod->data->next;
+    assert_int_equal(lyd_validate_value(a, NULL), EXIT_FAILURE); /* empty string is too short */
+    assert_int_equal(lyd_validate_value(a, "a"), EXIT_FAILURE); /* a is still too short */
+    assert_int_equal(lyd_validate_value(a, "bbb"), EXIT_FAILURE); /* does not match the pattern */
+    assert_int_equal(lyd_validate_value(a, "aaaaa"), EXIT_FAILURE); /* too long */
+    assert_int_equal(lyd_validate_value(a, "aaa"), EXIT_SUCCESS); /* ok */
 
-    /* b */
-    node = node->next;
-    assert_int_equal(lyd_validate_value(node, "2"), EXIT_FAILURE); /* too high */
-    assert_int_equal(lyd_validate_value(node, "-"), EXIT_FAILURE); /* does not match the type (yet) */
-    assert_int_equal(lyd_validate_value(node, "-2"), EXIT_FAILURE); /* too low */
-    assert_int_equal(lyd_validate_value(node, "0"), EXIT_SUCCESS); /* ok */
+    b = a->next;
+    assert_int_equal(lyd_validate_value(b, "2"), EXIT_FAILURE); /* too high */
+    assert_int_equal(lyd_validate_value(b, "-"), EXIT_FAILURE); /* does not match the type (yet) */
+    assert_int_equal(lyd_validate_value(b, "-2"), EXIT_FAILURE); /* too low */
+    assert_int_equal(lyd_validate_value(b, "0"), EXIT_SUCCESS); /* ok */
 
-    /* c */
-    node = node->next;
-    assert_int_equal(lyd_validate_value(node, "a"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "al"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "alf"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "alfa"), EXIT_SUCCESS); /* ok */
-    assert_int_equal(lyd_validate_value(node, "alfa "), EXIT_FAILURE);
-
-    /* d */
-    node = node->next;
-    assert_int_equal(lyd_validate_value(node, "-922337203685477580.9"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "-925337203685477580"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "922337203685477580.8"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "932337203685477580"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "-922337203685477580.8"), EXIT_SUCCESS); /* ok */
-    assert_int_equal(lyd_validate_value(node, "922337203685477580.7"), EXIT_SUCCESS); /* ok */
-
-    /* e */
-    node = node->next;
-    assert_int_equal(lyd_validate_value(node, "-922337203.6854775818"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "-9223372031"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "922337203.6854785807"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "1922337203"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "-922337203.6854775808"), EXIT_SUCCESS); /* ok */
-    assert_int_equal(lyd_validate_value(node, "922337203.6854775807"), EXIT_SUCCESS); /* ok */
-
-    /* f */
-    node = node->next;
-    assert_int_equal(lyd_validate_value(node, "-9.223372036854776808"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "-10"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "9.223372136854775807"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "11"), EXIT_FAILURE);
-    assert_int_equal(lyd_validate_value(node, "-9.223372036854775808"), EXIT_SUCCESS); /* ok */
-    assert_int_equal(lyd_validate_value(node, "9.223372036854775807"), EXIT_SUCCESS); /* ok */
-}
-
-void test_xmltojson_anydata(void **state)
-{
-    struct state *st = (*state);
-    const char *yang = "module y{"
-                        "  namespace urn:y;"
-                        "  prefix y;"
-                        "  extension test {"
-                        "    argument \"test\";"
-                        "  } "
-                        "  anydata data{"
-                        "    y:test \"MY_INTERFACES\";"
-                        "  }"
-                        "}";
-    const char *xml1 =  "<data xmlns =\"urn:y\">"
-                        "  <severity >test</severity>"
-                        "</data>";
-
-    const char *xml2 = "<data xmlns =\"urn:y\">abab</data>";
-
-    const char *xml_data_tree = "<data xmlns =\"urn:y\">"
-                                "+--rw interfaces"
-                                "|  +--rw interface* [name]"
-                                "|     +--rw name                        string"
-                                "|     +--rw description?                string"
-                                "|     +--rw type                        identityref"
-                                "|     +--rw link-up-down-trap-enable?   enumeration"
-                                "</data>";
-
-    const struct lys_module *mod;
-    mod = lys_parse_mem(st->ctx, yang, LYS_IN_YANG);
-    assert_ptr_not_equal(mod, NULL);
-
-    st->dt = lyd_parse_mem(st->ctx, xml1, LYD_XML, LYD_OPT_CONFIG);
-    assert_ptr_not_equal(st->dt, NULL);
-
-    lyd_print_mem(&st->data, st->dt, LYD_JSON, LYP_WITHSIBLINGS | LYP_WD_ALL);
-    assert_ptr_not_equal(st->data, NULL);
-    free(st->data);
-    st->data = NULL;
-    lyd_free_withsiblings(st->dt);
-
-    st->dt = lyd_parse_mem(st->ctx, xml2, LYD_XML, LYD_OPT_CONFIG);
-    assert_ptr_not_equal(st->dt, NULL);
-
-    lyd_print_mem(&st->data, st->dt, LYD_JSON, LYP_WITHSIBLINGS | LYP_WD_ALL);
-    assert_ptr_not_equal(st->data, NULL);
-    free(st->data);
-    st->data = NULL;
-    lyd_free_withsiblings(st->dt);
-
-    st->dt = lyd_parse_mem(st->ctx, xml_data_tree, LYD_XML, LYD_OPT_CONFIG);
-    assert_ptr_not_equal(st->dt, NULL);
-
-    lyd_print_mem(&st->data, st->dt, LYD_JSON, LYP_WITHSIBLINGS | LYP_WD_ALL);
-    assert_ptr_not_equal(st->data, NULL);
-}
-
-void test_xmltojson_extension(void **state)
-{
-    struct state *st = (*state);
-    const char *yang = "module y {"
-                       "  namespace urn:y;"
-                       "  prefix y;"
-                       "  extension test {"
-                       "    argument \"name\";"
-                       "  }"
-                       "  container y {"
-                       "    y:test  \"test\"; "
-                       "    leaf a { type string;}"
-                       "  }"
-                       "}";
-    const char *xml = "<y xmlns =\"urn:y\">"
-                      "  <a> \\\\major</a>"
-                      "</y>";
-
-    assert_ptr_not_equal(lys_parse_mem(st->ctx, yang, LYS_IN_YANG), NULL);
-
-    st->dt = lyd_parse_mem(st->ctx, xml, LYD_XML, LYD_OPT_CONFIG);
-    assert_ptr_not_equal(st->dt, NULL);
-
-    lyd_print_mem(&st->data, st->dt, LYD_JSON, LYP_WITHSIBLINGS | LYP_WD_ALL);
-    assert_ptr_not_equal(st->data, NULL);
+    c = b->next;
+    assert_int_equal(lyd_validate_value(c, "a"), EXIT_FAILURE);
+    assert_int_equal(lyd_validate_value(c, "al"), EXIT_FAILURE);
+    assert_int_equal(lyd_validate_value(c, "alf"), EXIT_FAILURE);
+    assert_int_equal(lyd_validate_value(c, "alfa"), EXIT_SUCCESS); /* ok */
+    assert_int_equal(lyd_validate_value(c, "alfa "), EXIT_FAILURE);
 }
 
 int main(void)
 {
     const struct CMUnitTest tests[] = {
                     cmocka_unit_test_setup_teardown(test_default_int, setup_f, teardown_f),
-                    cmocka_unit_test_setup_teardown(test_default_int_trusted, setup_f, teardown_f),
                     cmocka_unit_test_setup_teardown(test_xmltojson_identityref, setup_f, teardown_f),
                     cmocka_unit_test_setup_teardown(test_xmltojson_identityref2, setup_f, teardown_f),
                     cmocka_unit_test_setup_teardown(test_xmltojson_instanceid, setup_f, teardown_f),
                     cmocka_unit_test_setup_teardown(test_canonical, setup_f, teardown_f),
-                    cmocka_unit_test_setup_teardown(test_validate_value, setup_f, teardown_f),
-                    cmocka_unit_test_setup_teardown(test_xmltojson_anydata, setup_f, teardown_f),
-                    cmocka_unit_test_setup_teardown(test_xmltojson_extension, setup_f, teardown_f),
-    };
+                    cmocka_unit_test_setup_teardown(test_validate_value, setup_f, teardown_f),};
 
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

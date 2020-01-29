@@ -3,7 +3,7 @@
  * @author Radek Krejci <rkrejci@cesnet.cz>
  * @brief libyang's yanglint tool
  *
- * Copyright (c) 2015-2017 CESNET, z.s.p.o.
+ * Copyright (c) 2015-2016 CESNET, z.s.p.o.
  *
  * This source code is licensed under BSD 3-Clause License (the "License").
  * You may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
  *     https://opensource.org/licenses/BSD-3-Clause
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -19,10 +20,9 @@
 #include <unistd.h>
 
 #include "commands.h"
-#include "configuration.h"
 #include "completion.h"
 #include "../../linenoise/linenoise.h"
-#include "libyang.h"
+#include "../../src/libyang.h"
 
 int done;
 struct ly_ctx *ctx = NULL;
@@ -43,9 +43,7 @@ main(int argc, char* argv[])
 
     /* continue in interactive mode */
     linenoiseSetCompletionCallback(complete_cmd);
-    load_config();
-
-    ctx = ly_ctx_new(NULL, 0);
+    ctx = ly_ctx_new(NULL);
     if (!ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return 1;
@@ -103,7 +101,6 @@ main(int argc, char* argv[])
         free(cmdline);
     }
 
-    store_config();
     ly_ctx_destroy(ctx, NULL);
 
     return 0;

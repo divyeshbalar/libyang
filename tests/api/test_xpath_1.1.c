@@ -12,14 +12,13 @@
  *     https://opensource.org/licenses/BSD-3-Clause
  */
 
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 struct state {
     struct ly_ctx *ctx;
@@ -61,7 +60,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(schemadir, 0);
+    st->ctx = ly_ctx_new(schemadir);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         goto error;
@@ -106,7 +105,7 @@ test_func_re_match(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[re-match(., 'a+b+c+')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[re-match(., 'a+b+c+')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 2);
 }
@@ -119,7 +118,7 @@ test_func_deref(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "deref(/xpath-1.1:top/instid) | deref(/xpath-1.1:top/lref)");
+    st->set = lyd_find_xpath(st->dt, "deref(/xpath-1.1:top/instid) | deref(/xpath-1.1:top/lref)");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 2);
 
@@ -135,7 +134,7 @@ test_func_derived_from1(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident1')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident1')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -148,7 +147,7 @@ test_func_derived_from2(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident2')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident2')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 0);
 }
@@ -161,7 +160,7 @@ test_func_derived_from3(void **state)
     st->dt = lyd_parse_mem(st->ctx, data2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident1')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident1')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -174,7 +173,7 @@ test_func_derived_from4(void **state)
     st->dt = lyd_parse_mem(st->ctx, data2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident2')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from(., 'ident2')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 0);
 }
@@ -187,7 +186,7 @@ test_func_derived_from_or_self1(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident1')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident1')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -200,7 +199,7 @@ test_func_derived_from_or_self2(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident2')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident2')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -213,7 +212,7 @@ test_func_derived_from_or_self3(void **state)
     st->dt = lyd_parse_mem(st->ctx, data2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident1')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident1')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -226,7 +225,7 @@ test_func_derived_from_or_self4(void **state)
     st->dt = lyd_parse_mem(st->ctx, data2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident2')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[derived-from-or-self(., 'ident2')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -239,7 +238,7 @@ test_func_enum_value1(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[enum-value(.) = 2]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[enum-value(.) = 2]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -252,7 +251,7 @@ test_func_enum_value2(void **state)
     st->dt = lyd_parse_mem(st->ctx, data2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[enum-value(.) = 10]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[enum-value(.) = 10]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -265,7 +264,7 @@ test_func_bit_is_set1(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[bit-is-set(., 'flag3')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[bit-is-set(., 'flag3')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 1);
 }
@@ -278,7 +277,7 @@ test_func_bit_is_set2(void **state)
     st->dt = lyd_parse_mem(st->ctx, data1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);
 
-    st->set = lyd_find_path(st->dt, "/xpath-1.1:top/*[bit-is-set(., 'flag2')]");
+    st->set = lyd_find_xpath(st->dt, "/xpath-1.1:top/*[bit-is-set(., 'flag2')]");
     assert_ptr_not_equal(st->set, NULL);
     assert_int_equal(st->set->number, 0);
 }

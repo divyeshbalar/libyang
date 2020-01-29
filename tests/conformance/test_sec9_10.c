@@ -17,13 +17,12 @@
 #include <setjmp.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdarg.h>
 #include <cmocka.h>
 #include <string.h>
 #include <sys/wait.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 #define TEST_DIR "sec9_10"
 #define TEST_NAME test_sec9_10
@@ -49,7 +48,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
+    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;
@@ -95,7 +94,7 @@ TEST_IDENTITYREF(void **state)
 
         for (j = 0; j < TEST_DATA_FILE_COUNT; ++j) {
             sprintf(buf, TESTS_DIR "/conformance/" TEST_DIR "/data%d.xml", j + 1);
-            st->node = lyd_parse_path(st->ctx, buf, LYD_XML, LYD_OPT_CONFIG);
+            st->node = lyd_parse_path(st->ctx, buf, LYD_XML, LYD_OPT_CONFIG | LYD_OPT_NOAUTODEL);
             if (data_files_fail[j]) {
                 assert_ptr_equal(st->node, NULL);
             } else {
@@ -122,12 +121,6 @@ TEST_IDENTITYREF(void **state)
             }
 
             schema_format = LYS_IN_YIN;
-            ly_ctx_destroy(st->ctx, NULL);
-            st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
-            if (!st->ctx) {
-                fprintf(stderr, "Failed to create context.\n");
-                fail();
-            }
         } else {
             /* remove the modules */
             for (j = 0; j < TEST_SCHEMA_COUNT; ++j) {
@@ -176,7 +169,7 @@ TEST_IDENTITYREF2(void **state)
     assert_ptr_equal(st->node, NULL);
 
     /* but making it implemented the data can be loaded */
-    assert_int_equal(lys_set_implemented(ly_ctx_get_module(st->ctx, "mod-middle", NULL, 0)), 0);
+    assert_int_equal(lys_set_implemented(ly_ctx_get_module(st->ctx, "mod-middle", NULL)), 0);
     st->node = lyd_parse_mem(st->ctx, middle_data, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->node, NULL);
 }

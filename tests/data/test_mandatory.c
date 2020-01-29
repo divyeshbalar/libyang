@@ -15,11 +15,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
-#include <stdarg.h>
 #include <cmocka.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 struct state {
     struct ly_ctx *ctx;
@@ -39,7 +38,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(NULL, 0);
+    st->ctx = ly_ctx_new(NULL);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;
@@ -112,50 +111,50 @@ test_mandatory(void **state)
     st->dt = lyd_parse_mem(st->ctx, miss_leaf1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_MISSELEM);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top");
+    assert_int_equal(ly_vecode, LYVE_MISSELEM);
+    assert_string_equal(ly_errpath(), "/mandatory:top");
 
     st->dt = lyd_parse_mem(st->ctx, few_llist1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_NOMIN);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top");
+    assert_int_equal(ly_vecode, LYVE_NOMIN);
+    assert_string_equal(ly_errpath(), "/mandatory:top");
 
     st->dt = lyd_parse_mem(st->ctx, many_llist1, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_NOMAX);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top/llist1[.='6']");
+    assert_int_equal(ly_vecode, LYVE_NOMAX);
+    assert_string_equal(ly_errpath(), "/mandatory:top/llist1[.='6']");
 
     st->dt = lyd_parse_mem(st->ctx, miss_leaf2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_MISSELEM);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top/cont1/cont2/cont3");
+    assert_int_equal(ly_vecode, LYVE_MISSELEM);
+    assert_string_equal(ly_errpath(), "/mandatory:top/cont1/cont2/cont3");
 
     st->dt = lyd_parse_mem(st->ctx, miss_choice2, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_NOMANDCHOICE);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top");
+    assert_int_equal(ly_vecode, LYVE_NOMANDCHOICE);
+    assert_string_equal(ly_errpath(), "/mandatory:top");
 
     st->dt = lyd_parse_mem(st->ctx, miss_leaf6, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_MISSELEM);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top");
+    assert_int_equal(ly_vecode, LYVE_MISSELEM);
+    assert_string_equal(ly_errpath(), "/mandatory:top");
 
     st->dt = lyd_parse_mem(st->ctx, miss_leaf7, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_MISSELEM);
-    assert_string_equal(ly_errpath(st->ctx), "/mandatory:top");
+    assert_int_equal(ly_vecode, LYVE_MISSELEM);
+    assert_string_equal(ly_errpath(), "/mandatory:top");
 
     st->dt = lyd_parse_mem(st->ctx, miss_topleaf, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_equal(st->dt, NULL);
     assert_int_equal(ly_errno, LY_EVALID);
-    assert_int_equal(ly_vecode(st->ctx), LYVE_MISSELEM);
-    assert_string_equal(ly_errpath(st->ctx), "/");
+    assert_int_equal(ly_vecode, LYVE_MISSELEM);
+    assert_string_equal(ly_errpath(), "/");
 
     st->dt = lyd_parse_mem(st->ctx, valid, LYD_XML, LYD_OPT_CONFIG);
     assert_ptr_not_equal(st->dt, NULL);

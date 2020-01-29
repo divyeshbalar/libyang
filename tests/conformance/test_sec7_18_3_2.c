@@ -17,18 +17,17 @@
 #include <setjmp.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdarg.h>
 #include <cmocka.h>
 #include <string.h>
 #include <sys/wait.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 #define TEST_DIR "sec7_18_3_2"
 #define TEST_NAME test_sec7_18_3_2
-#define TEST_SCHEMA_COUNT 13
-#define TEST_SCHEMA_LOAD_FAIL 1,1,1,1,1,1,1,1,1,1,1,1,0
+#define TEST_SCHEMA_COUNT 14
+#define TEST_SCHEMA_LOAD_FAIL 1,1,1,1,1,1,1,1,1,1,1,1,0,1
 #define TEST_DATA_FILE_COUNT 7
 #define TEST_DATA_FILE_LOAD_FAIL 1,1,1,0,0,1,1
 
@@ -49,7 +48,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
+    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;
@@ -92,11 +91,11 @@ TEST_DEVIATION(void **state)
                 assert_ptr_not_equal(mod, NULL);
             }
         }
-        lys_set_implemented(ly_ctx_get_module(st->ctx, "mod", NULL, 0));
+        lys_set_implemented(ly_ctx_get_module(st->ctx, "mod", NULL));
 
         for (j = 0; j < TEST_DATA_FILE_COUNT; ++j) {
             sprintf(buf, TESTS_DIR "/conformance/" TEST_DIR "/data%d.xml", j + 1);
-            st->node = lyd_parse_path(st->ctx, buf, LYD_XML, LYD_OPT_CONFIG);
+            st->node = lyd_parse_path(st->ctx, buf, LYD_XML, LYD_OPT_CONFIG | LYD_OPT_NOAUTODEL);
             if (data_files_fail[j]) {
                 assert_ptr_equal(st->node, NULL);
             } else {
@@ -124,7 +123,7 @@ TEST_DEVIATION(void **state)
 
             schema_format = LYS_IN_YIN;
             ly_ctx_destroy(st->ctx, NULL);
-            st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
+            st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR);
             if (!st->ctx) {
                 fprintf(stderr, "Failed to create context.\n");
                 fail();

@@ -15,7 +15,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <stdarg.h>
 #include <cmocka.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,8 +25,8 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 struct ly_ctx *ctx = NULL;
 struct lyd_node *root = NULL;
@@ -49,7 +48,7 @@ generic_init(char *config_file, char *yang_file, char *yang_folder)
     yang_format = LYS_IN_YIN;
     in_format = LYD_XML;
 
-    ctx = ly_ctx_new(yang_folder, 0);
+    ctx = ly_ctx_new(yang_folder);
     if (!ctx) {
         goto error;
     }
@@ -131,7 +130,7 @@ static void
 test_ctx_new_destroy(void **state)
 {
     (void) state; /* unused */
-    ctx = ly_ctx_new(NULL, 0);
+    ctx = ly_ctx_new(NULL);
     if (!ctx) {
         fail();
     }

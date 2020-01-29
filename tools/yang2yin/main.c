@@ -30,8 +30,6 @@ enum yang_arg {
 
 enum yang_token {
     YANG_UNKNOWN = 0,
-    YANG_ACTION,
-    YANG_ANYDATA,
     YANG_ANYXML,
     YANG_ARGUMENT,
     YANG_AUGMENT,
@@ -67,7 +65,6 @@ enum yang_token {
     YANG_MANDATORY,
     YANG_MAX_ELEMENTS,
     YANG_MIN_ELEMENTS,
-    YANG_MODIFIER,
     YANG_MODULE,
     YANG_MUST,
     YANG_NAMESPACE,
@@ -109,10 +106,6 @@ static const char *
 keyword2str(enum yang_token keyword)
 {
     switch (keyword) {
-    case YANG_ACTION:
-        return "action";
-    case YANG_ANYDATA:
-        return "anydata";
     case YANG_ANYXML:
         return "anyxml";
     case YANG_ARGUMENT:
@@ -183,8 +176,6 @@ keyword2str(enum yang_token keyword)
         return "max-elements";
     case YANG_MIN_ELEMENTS:
         return "min-elements";
-    case YANG_MODIFIER:
-        return "modifier";
     case YANG_MODULE:
         return "module";
     case YANG_MUST:
@@ -373,7 +364,7 @@ get_word(FILE *in, char **buf, int *buf_len)
                     return NULL;
                 }
             }
-        } else if (((c == '\'') || (c == '\"')) && !string && !comment) {
+        } else if (((c == '\'') || (c == '\"')) && !string) {
             if (used) {
                 /* we want strings always in a separate word, leave it */
                 if (ungetc(c, in) != c) {
@@ -517,15 +508,7 @@ get_keyword(char *word, enum yang_arg *arg)
     switch (word[0]) {
     case 'a':
         ++word;
-        if (!strncmp(word, "ction", 5)) {
-            word += 5;
-            ret = YANG_ACTION;
-            *arg = Y_STR_ARG;
-	} else if (!strncmp(word, "nydata", 6)) {
-            word += 6;
-            ret = YANG_ANYDATA;
-            *arg = Y_IDENTIF_ARG;
-	} else if (!strncmp(word, "nyxml", 5)) {
+        if (!strncmp(word, "nyxml", 5)) {
             word += 5;
             ret = YANG_ANYXML;
             *arg = Y_IDENTIF_ARG;
@@ -730,10 +713,6 @@ get_keyword(char *word, enum yang_arg *arg)
         } else if (!strncmp(word, "in-elements", 11)) {
             word += 11;
             ret = YANG_MIN_ELEMENTS;
-            *arg = Y_STR_ARG;
-        } else if (!strncmp(word, "odifier", 7)) {
-            word += 7;
-            ret = YANG_MODIFIER;
             *arg = Y_STR_ARG;
         } else if (!strncmp(word, "odule", 5)) {
             word += 5;
@@ -1019,14 +998,6 @@ print_keyword(enum yang_token keyword, enum yang_arg arg, FILE *out, int level, 
     const char *yin_element = NULL, *close_tag;
 
     switch (keyword) {
-    case YANG_ACTION:
-        fprintf(out, "%*s<action name=\"", LEVEL(level), INDENT(level));
-        close_tag = "action";
-        break;
-    case YANG_ANYDATA:
-        fprintf(out, "%*s<anydata name=\"", LEVEL(level), INDENT(level));
-        close_tag = "anydata";
-        break;
     case YANG_ANYXML:
         fprintf(out, "%*s<anyxml name=\"", LEVEL(level), INDENT(level));
         close_tag = "anyxml";
@@ -1170,10 +1141,6 @@ print_keyword(enum yang_token keyword, enum yang_arg arg, FILE *out, int level, 
         fprintf(out, "%*s<min-elements value=\"", LEVEL(level), INDENT(level));
         close_tag = "min-elements";
         break;
-    case YANG_MODIFIER:
-        fprintf(out, "%*s<modifier value=\"", LEVEL(level), INDENT(level));
-        close_tag = "modifier";
-        break;
     case YANG_MUST:
         fprintf(out, "%*s<must condition=\"", LEVEL(level), INDENT(level));
         close_tag = "must";
@@ -1278,7 +1245,7 @@ print_keyword(enum yang_token keyword, enum yang_arg arg, FILE *out, int level, 
         break;
     case YANG_WHEN:
         fprintf(out, "%*s<when condition=\"", LEVEL(level), INDENT(level));
-        close_tag = "when";
+        close_tag = "condition";
         break;
     case YANG_YANG_VERSION:
         fprintf(out, "%*s<yang-version value=\"", LEVEL(level), INDENT(level));
@@ -1634,7 +1601,6 @@ find_namespace_imports(FILE *in, char **buf, int *buf_len, char **name_space, ch
         case YANG_LIST:
         case YANG_CHOICE:
         case YANG_ANYXML:
-        case YANG_ANYDATA:
         case YANG_USES:
         case YANG_AUGMENT:
         case YANG_RPC:
@@ -1695,7 +1661,7 @@ convert_yang2yin(FILE *out, FILE *in, const char *search_dir)
      * 1st module parsing
      */
 
-    /* learn whether it's a module or submodule */
+    /* learn whther it's a module or submodule */
     word = get_word(in, &buf, &buf_len);
     if (!word) {
         free(buf);
@@ -1828,8 +1794,6 @@ main(int argc, char **argv)
     case 2:
         if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
             fprintf(stdout, "Usage:\n\t%s [input-file] [output-file]\n", argv[0]);
-            fprintf(stdout, "\n\tinput-file:   intput yang file path. If empty, input from stdin. \n");
-            fprintf(stdout, "\toutput-file:  output yin file path. If empty, output to stdout.  \n\n");
             return 0;
         }
         in_file = argv[1];

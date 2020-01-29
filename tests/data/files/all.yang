@@ -3,10 +3,6 @@ module all {
   namespace "urn:all";
   prefix all_mod;
 
-  import all-imp {
-    prefix all_imp;
-  }
-
   revision 2016-05-23;
   revision 2016-05-22;
 
@@ -16,8 +12,6 @@ module all {
   }
 
   feature feat2;
-
-  feature feat3;
 
   identity ident2 {
     base ident1;
@@ -57,7 +51,6 @@ module all {
     uses group1 {
       if-feature "feat2";
       refine "leaf1" {
-        if-feature "feat3";
         must "24 - 4 = number('20')";
         default "25";
         config true;
@@ -100,21 +93,17 @@ module all {
     }
 
     choice choic1 {
-      default "leaf9b";
-      leaf leaf9a {
+      default "leaf10";
+      leaf leaf9 {
         type decimal64 {
           fraction-digits 9;
         }
       }
 
-      leaf leaf9b {
+      leaf leaf10 {
         type boolean;
         default "false";
       }
-    }
-
-    leaf leaf10 {
-      type boolean;
     }
 
     leaf leaf11 {
@@ -207,28 +196,6 @@ module all {
       ordered-by user;
     }
 
-    list list2 {
-      key "leaf27 leaf28";
-      leaf leaf27 {
-        type uint8;
-      }
-
-      leaf leaf28 {
-        type uint8;
-      }
-    }
-
-    leaf leaf29 {
-      type instance-identifier;
-    }
-
-    container must-deviations-container {
-      presence "Allows deviations on the leaf";
-      leaf leaf30 {
-        type string;
-      }
-    }
-
     leaf leaf23 {
       type empty;
     }
@@ -237,9 +204,8 @@ module all {
   augment "/cont1" {
     leaf leaf17 {
       type identityref {
-        base all_imp:ident4;
+        base ident1;
       }
-      must "../leaf17 = 'all_imp:ident5'";
     }
   }
 

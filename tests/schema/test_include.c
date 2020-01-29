@@ -25,8 +25,8 @@
 
 #include <cmocka.h>
 
-#include "libyang.h"
-#include "tests/config.h"
+#include "../../src/libyang.h"
+#include "../config.h"
 
 #define SCHEMA_FOLDER_YIN TESTS_DIR"/schema/yin/files"
 #define SCHEMA_FOLDER_YANG TESTS_DIR"/schema/yang/files"
@@ -34,7 +34,7 @@
 static int
 setup_ctx(void **state)
 {
-    *state = ly_ctx_new(NULL, 0);
+    *state = ly_ctx_new(NULL);
     if (!*state) {
         return -1;
     }
@@ -77,7 +77,7 @@ test_mult_revisions(void **state)
     assert_ptr_not_equal(lys_parse_mem(ctx, sch_correct_yin, LYS_IN_YIN), NULL);
 
     ly_ctx_destroy(*state, NULL);
-    *state = ctx = ly_ctx_new(SCHEMA_FOLDER_YANG, 0);
+    *state = ctx = ly_ctx_new(SCHEMA_FOLDER_YANG);
 
     assert_ptr_equal(lys_parse_mem(ctx, sch_yang, LYS_IN_YANG), NULL);
     assert_ptr_not_equal(lys_parse_mem(ctx, sch_correct_yang, LYS_IN_YANG), NULL);
@@ -98,12 +98,12 @@ test_circular_include(void **state)
     ly_ctx_set_searchdir(ctx, SCHEMA_FOLDER_YIN);
 
     assert_ptr_equal(lys_parse_mem(ctx, sch_yin, LYS_IN_YIN), NULL);
-    assert_int_equal(ly_vecode(ctx), LYVE_CIRC_INCLUDES);
+    assert_int_equal(ly_vecode, LYVE_CIRC_INCLUDES);
 
     ly_ctx_set_searchdir(ctx, SCHEMA_FOLDER_YANG);
 
     assert_ptr_equal(lys_parse_mem(ctx, sch_yang, LYS_IN_YANG), NULL);
-    assert_int_equal(ly_vecode(ctx), LYVE_CIRC_INCLUDES);
+    assert_int_equal(ly_vecode, LYVE_CIRC_INCLUDES);
 }
 
 int

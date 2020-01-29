@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 
-#include "libyang.h"
 #include "tree_schema.h"
 #include "tree_data.h"
 
@@ -35,37 +34,35 @@
  *
  * Modified full grammar:
  *
- * [1] Expr ::= OrExpr // just an alias
- *
- * [2] LocationPath ::= RelativeLocationPath | AbsoluteLocationPath
- * [3] AbsoluteLocationPath ::= '/' RelativeLocationPath? | '//' RelativeLocationPath
- * [4] RelativeLocationPath ::= Step | RelativeLocationPath '/' Step | RelativeLocationPath '//' Step
- * [5] Step ::= '@'? NodeTest Predicate* | '.' | '..'
- * [6] NodeTest ::= NameTest | NodeType '(' ')'
- * [7] Predicate ::= '[' Expr ']'
- * [8] PrimaryExpr ::= '(' Expr ')' | Literal | Number | FunctionCall
- * [9] FunctionCall ::= FunctionName '(' ( Expr ( ',' Expr )* )? ')'
- * [10] PathExpr ::= LocationPath | PrimaryExpr Predicate*
+ * [1] LocationPath ::= RelativeLocationPath | AbsoluteLocationPath
+ * [2] AbsoluteLocationPath ::= '/' RelativeLocationPath? | '//' RelativeLocationPath
+ * [3] RelativeLocationPath ::= Step | RelativeLocationPath '/' Step | RelativeLocationPath '//' Step
+ * [4] Step ::= '@'? NodeTest Predicate* | '.' | '..'
+ * [5] NodeTest ::= NameTest | NodeType '(' ')'
+ * [6] Predicate ::= '[' Expr ']'
+ * [7] PrimaryExpr ::= '(' Expr ')' | Literal | Number | FunctionCall
+ * [8] FunctionCall ::= FunctionName '(' ( Expr ( ',' Expr )* )? ')'
+ * [9] PathExpr ::= LocationPath | PrimaryExpr Predicate*
  *                 | PrimaryExpr Predicate* '/' RelativeLocationPath
  *                 | PrimaryExpr Predicate* '//' RelativeLocationPath
- * [11] OrExpr ::= AndExpr | OrExpr 'or' AndExpr
- * [12] AndExpr ::= EqualityExpr | AndExpr 'and' EqualityExpr
- * [13] EqualityExpr ::= RelationalExpr | EqualityExpr '=' RelationalExpr
+ * [10] Expr ::= AndExpr | Expr 'or' AndExpr
+ * [11] AndExpr ::= EqualityExpr | AndExpr 'and' EqualityExpr
+ * [12] EqualityExpr ::= RelationalExpr | EqualityExpr '=' RelationalExpr
  *                     | EqualityExpr '!=' RelationalExpr
- * [14] RelationalExpr ::= AdditiveExpr
+ * [13] RelationalExpr ::= AdditiveExpr
  *                       | RelationalExpr '<' AdditiveExpr
  *                       | RelationalExpr '>' AdditiveExpr
  *                       | RelationalExpr '<=' AdditiveExpr
  *                       | RelationalExpr '>=' AdditiveExpr
- * [15] AdditiveExpr ::= MultiplicativeExpr
+ * [14] AdditiveExpr ::= MultiplicativeExpr
  *                     | AdditiveExpr '+' MultiplicativeExpr
  *                     | AdditiveExpr '-' MultiplicativeExpr
- * [16] MultiplicativeExpr ::= UnaryExpr
+ * [15] MultiplicativeExpr ::= UnaryExpr
  *                     | MultiplicativeExpr '*' UnaryExpr
  *                     | MultiplicativeExpr 'div' UnaryExpr
  *                     | MultiplicativeExpr 'mod' UnaryExpr
- * [17] UnaryExpr ::= UnionExpr | '-' UnaryExpr
- * [18] UnionExpr ::= PathExpr | UnionExpr '|' PathExpr
+ * [16] UnaryExpr ::= UnionExpr | '-' UnaryExpr
+ * [17] UnionExpr ::= PathExpr | UnionExpr '|' PathExpr
  */
 
 /* expression tokens allocation */
@@ -108,29 +105,14 @@ enum lyxp_token {
 };
 
 /**
- * @brief XPath (sub)expressions that can be repeated.
- */
-enum lyxp_expr_type {
-    LYXP_EXPR_NONE = 0,
-    LYXP_EXPR_OR,
-    LYXP_EXPR_AND,
-    LYXP_EXPR_EQUALITY,
-    LYXP_EXPR_RELATIONAL,
-    LYXP_EXPR_ADDITIVE,
-    LYXP_EXPR_MULTIPLICATIVE,
-    LYXP_EXPR_UNARY,
-    LYXP_EXPR_UNION,
-};
-
-/**
  * @brief Structure holding a parsed XPath expression.
  */
 struct lyxp_expr {
     enum lyxp_token *tokens; /* array of tokens */
     uint16_t *expr_pos;      /* array of pointers to the expression in expr (idx of the beginning) */
-    uint16_t *tok_len;       /* array of token lengths in expr */
-    enum lyxp_expr_type **repeat; /* array of expression types that this token begins and is repeated ended with 0,
-                                     more in the comment after this declaration */
+    uint8_t *tok_len;        /* array of token lengths in expr */
+    uint8_t **repeat;        /* array of the operator token indices that succeed this expression ended with 0,
+                                more in the comment after this declaration */
     uint16_t used;           /* used array items */
     uint16_t size;           /* allocated array items */
 
@@ -142,24 +124,18 @@ struct lyxp_expr {
  *
  * This value is NULL for all the tokens that do not begin an
  * expression which can be repeated. Otherwise it is an array
- * of expression types that this token begins. These values
+ * of indices in the tokens array that are an operator for
+ * which the current expression is an operand. These values
  * are used during evaluation to know whether we need to
- * duplicate the current context or not and to decide what
- * the current expression is (for example, if we are only
- * starting the parsing and the first token has no repeat,
- * we do not parse it as an OrExpr but directly as PathExpr).
- * Examples:
+ * duplicate the current context or not. Examples:
  *
  * Expression: "/ *[key1 and key2 or key1 < key2]"
- * Tokens: '/',  '*',  '[',  NameTest,  'and', NameTest, 'or', NameTest,        '<',  NameTest, ']'
- * Repeat: NULL, NULL, NULL, [AndExpr,  NULL,  NULL,     NULL, [RelationalExpr, NULL, NULL,     NULL
- *                            OrExpr,                           0],
- *                            0],
+ * Tokens: '/',  '*',  '[',  NameTest,  'and', NameTest, 'or', NameTest, '<',  NameTest, ']'
+ * Repeat: NULL, NULL, NULL, [4, 6, 0], NULL,  NULL,     NULL, [8, 0],   NULL, NULL,     NULL
  *
  * Expression: "//node[key and node2]/key | /cont"
- * Tokens: '//',       'NameTest', '[',  'NameTest', 'and', 'NameTest', ']',  '/',  'NameTest', '|',  '/',  'NameTest'
- * Repeat: [UnionExpr, NULL,       NULL, [AndExpr,   NULL,  NULL,       NULL, NULL, NULL,       NULL, NULL, NULL
- *          0],                           0],
+ * Tokens: '//',   'NameTest', '[',  'NameTest', 'and', 'NameTest', ']',  '/',  'NameTest', '|',  '/',  'NameTest'
+ * Repeat: [9, 0], NULL,       NULL, [4, 0],     NULL,  NULL,       NULL, NULL, NULL,       NULL, NULL, NULL
  *
  * Operators between expressions which this concerns:
  *     'or', 'and', '=', '!=', '<', '>', '<=', '>=', '+', '-', '*', 'div', 'mod', '|'
@@ -177,30 +153,18 @@ enum lyxp_set_type {
     LYXP_SET_STRING
 };
 
-#ifdef LY_ENABLED_CACHE
-
-/**
- * @brief Item stored in an XPath set hash table.
- */
-struct lyxp_set_hash_node {
-    struct lyd_node *node;
-    enum lyxp_node_type type;
-} _PACKED;
-
-#endif
-
 /**
  * @brief XPath set - (partial) result.
  */
 struct lyxp_set {
     enum lyxp_set_type type;
     union {
-        struct lyxp_set_node {
+        struct lyxp_set_nodes {
             struct lyd_node *node;
             enum lyxp_node_type type;
             uint32_t pos;
         } *nodes;
-        struct lyxp_set_snode {
+        struct lyxp_set_snodes {
             struct lys_node *snode;
             enum lyxp_node_type type;
             /* 0 - snode was traversed, but not currently in the context,
@@ -209,7 +173,7 @@ struct lyxp_set {
              * >=3 - snode is not in context because we are in a predicate and this snode was used/will be used later */
             uint32_t in_ctx;
         } *snodes;
-        struct lyxp_set_attr {
+        struct lyxp_set_attrs {
             struct lyd_attr *attr;
             enum lyxp_node_type type;
             uint32_t pos; /* if node_type is LYXP_SET_NODE_ATTR, it is the parent node position */
@@ -222,9 +186,6 @@ struct lyxp_set {
     /* this is valid only for type LYXP_SET_NODE_SET and LYXP_SET_SNODE_SET */
     uint32_t used;
     uint32_t size;
-#ifdef LY_ENABLED_CACHE
-    struct hash_table *ht;
-#endif
     /* this is valid only for type LYXP_SET_NODE_SET */
     uint32_t ctx_pos;
     uint32_t ctx_size;
@@ -259,9 +220,6 @@ int lyxp_eval(const char *expr, const struct lyd_node *cur_node, enum lyxp_node_
 /**
  * @brief Get all the partial XPath nodes (atoms) that are required for \p expr to be evaluated.
  *
- * If any LYXP_SNODE* options is set, only fatal errors are printed, otherwise they are downgraded
- * to warnings.
- *
  * @param[in] expr XPath expression to be evaluated. Must be in JSON format (prefixes are model names).
  * @param[in] cur_snode Current (context) schema node.
  * @param[in] cur_snode_type Current (context) schema node type.
@@ -274,12 +232,11 @@ int lyxp_eval(const char *expr, const struct lyd_node *cur_node, enum lyxp_node_
  * LYXP_SNODE_MUST - apply must data tree access restrictions.
  * LYXP_SNODE_WHEN - apply when data tree access restrictions.
  * LYXP_SNODE_OUTPUT - search RPC/action output instead input
- * @param[out] ctx_snode Actual context node for the expression (it often changes for "when" expressions).
  *
  * @return EXIT_SUCCESS on success, -1 on error.
  */
 int lyxp_atomize(const char *expr, const struct lys_node *cur_snode, enum lyxp_node_type cur_snode_type,
-                 struct lyxp_set *set, int options, const struct lys_node **ctx_snode);
+                 struct lyxp_set *set, int options);
 
 /* these are used only internally */
 #define LYXP_SNODE 0x04
@@ -287,7 +244,7 @@ int lyxp_atomize(const char *expr, const struct lys_node *cur_snode, enum lyxp_n
 #define LYXP_SNODE_WHEN 0x10
 #define LYXP_SNODE_OUTPUT 0x20
 
-#define LYXP_SNODE_ALL 0x3C
+#define LYXP_SNODE_ALL 0x1C
 
 /**
  * @brief Works like lyxp_atomize(), but it is executed on all the when and must expressions
@@ -296,12 +253,12 @@ int lyxp_atomize(const char *expr, const struct lys_node *cur_snode, enum lyxp_n
  * @param[in] node Node to examine.
  * @param[in,out] set Resulting set of atoms merged from all the expressions.
  * Will be cleared before use.
- * @param[in] set_ext_dep_flags Whether to set #LYS_XPCONF_DEP or #LYS_XPSTATE_DEP for conditions that
- * require foreign configuration or state subtree and also for the node itself, if it has any such condition.
+ * @param[in] warn_on_fwd_ref Setting this flag causes no errors to be printed and
+ * only warning is printed on forward reference paths (addressing a non-existing node).
  *
- * @return EXIT_SUCCESS on success, -1 on error.
+ * @return EXIT_SUCCESS on success, EXIT_FAILURE on forward reference, -1 on error.
  */
-int lyxp_node_atomize(const struct lys_node *node, struct lyxp_set *set, int set_ext_dep_flags);
+int lyxp_node_atomize(const struct lys_node *node, struct lyxp_set *set, int warn_on_fwd_ref);
 
 /**
  * @brief Check syntax of all the XPath expressions of the node.
@@ -340,12 +297,11 @@ void lyxp_set_free(struct lyxp_set *set);
  *
  * http://www.w3.org/TR/1999/REC-xpath-19991116/ section 3.7
  *
- * @param[in] ctx Context for errors.
  * @param[in] expr XPath expression to parse. It is duplicated.
  *
  * @return Filled expression structure or NULL on error.
  */
-struct lyxp_expr *lyxp_parse_expr(struct ly_ctx *ctx, const char *expr);
+struct lyxp_expr *lyxp_parse_expr(const char *expr);
 
 /**
  * @brief Frees a parsed XPath expression. \p expr should not be used afterwards.

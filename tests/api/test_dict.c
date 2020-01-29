@@ -27,8 +27,8 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 struct ly_ctx *ctx = NULL;
 
@@ -51,7 +51,7 @@ generic_init(char *yang_file, char *yang_folder)
 
     yang_format = LYS_IN_YIN;
 
-    ctx = ly_ctx_new(yang_folder, 0);
+    ctx = ly_ctx_new(yang_folder);
     if (!ctx) {
         goto error;
     }
@@ -134,8 +134,6 @@ test_lydict_insert(void **state)
     }
 
     assert_string_equal(value, string);
-    lydict_remove(ctx, "bubba");
-    lydict_remove(ctx, "x");
 }
 
 static void
@@ -159,18 +157,16 @@ test_lydict_insert_zc(void **state)
 
     value = strdup("bubba");
     if (!value) {
+        free(value);
         fail();
     }
 
     string = lydict_insert_zc(ctx, value);
     if (!string) {
-        free(value);
         fail();
     }
 
     assert_string_equal("bubba", string);
-    lydict_remove(ctx, "bubba");
-    lydict_remove(ctx, "x");
 }
 
 static void
@@ -186,7 +182,6 @@ test_lydict_remove(void **state)
     }
     value2 = strdup("new_name");
     if (!value2) {
-        free(value);
         fail();
     }
 
@@ -194,7 +189,6 @@ test_lydict_remove(void **state)
     string = lydict_insert_zc(ctx, value); /* 1st instance */
     if (!string) {
         free(value);
-        free(value2);
         fail();
     }
 
@@ -210,49 +204,12 @@ test_lydict_remove(void **state)
     lydict_remove(ctx, str);
 }
 
-static void
-test_similar_strings(void **state) {
-    (void) state; /* unused */
-
-    const char *ret = NULL;
-
-    ret = lydict_insert(ctx, "aaab", 4);
-    if (!ret) {
-        fail();
-    }
-    assert_string_equal(ret, "aaab");
-
-    ret = lydict_insert(ctx, "aaa", 3);
-    if (!ret) {
-        fail();
-    }
-    assert_string_equal(ret, "aaa");
-
-    ret = lydict_insert(ctx, "bbb", 3);
-    if (!ret) {
-        fail();
-    }
-    assert_string_equal(ret, "bbb");
-
-    ret = lydict_insert(ctx, "bbba", 4);
-    if (!ret) {
-        fail();
-    }
-    assert_string_equal(ret, "bbba");
-
-    lydict_remove(ctx, "aaa");
-    lydict_remove(ctx, "aaab");
-    lydict_remove(ctx, "bbb");
-    lydict_remove(ctx, "bbba");
-}
-
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(test_lydict_insert, setup_f, teardown_f),
         cmocka_unit_test_setup_teardown(test_lydict_insert_zc, setup_f, teardown_f),
         cmocka_unit_test_setup_teardown(test_lydict_remove, setup_f, teardown_f),
-        cmocka_unit_test_setup_teardown(test_similar_strings, setup_f, teardown_f),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

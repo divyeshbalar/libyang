@@ -17,13 +17,12 @@
 #include <setjmp.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdarg.h>
 #include <cmocka.h>
 #include <string.h>
 #include <sys/wait.h>
 
-#include "tests/config.h"
-#include "libyang.h"
+#include "../config.h"
+#include "../../src/libyang.h"
 
 #define TEST_DIR "sec7_18_2"
 #define TEST_NAME test_sec7_18_2
@@ -52,7 +51,7 @@ setup_f(void **state)
     }
 
     /* libyang context */
-    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
+    st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR);
     if (!st->ctx) {
         fprintf(stderr, "Failed to create context.\n");
         return -1;
@@ -102,7 +101,7 @@ TEST_IFFEATURE(void **state)
 
         for (j = l = 0; j < TEST_DATA_FILE_COUNT; ++j) {
             sprintf(buf, TESTS_DIR "/conformance/" TEST_DIR "/data%d.xml", j + 1);
-            mod = ly_ctx_get_module(st->ctx, data_module_string[j], NULL, 0);
+            mod = ly_ctx_get_module(st->ctx, data_module_string[j], NULL);
 
             for(k = 0; k < data_feature_count[j]; ++k, ++l) {
                 lys_features_enable(mod, data_enable_feature[l]);
@@ -134,12 +133,6 @@ TEST_IFFEATURE(void **state)
             }
 
             schema_format = LYS_IN_YIN;
-            ly_ctx_destroy(st->ctx, NULL);
-            st->ctx = ly_ctx_new(TESTS_DIR "/conformance/" TEST_DIR, 0);
-            if (!st->ctx) {
-                fprintf(stderr, "Failed to create context.\n");
-                fail();
-            }
         } else {
             /* remove the modules */
             for (j = 0; j < TEST_SCHEMA_COUNT; ++j) {

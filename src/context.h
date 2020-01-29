@@ -15,12 +15,9 @@
 #ifndef LY_CONTEXT_H_
 #define LY_CONTEXT_H_
 
-#include <pthread.h>
-
-#include "libyang.h"
-#include "common.h"
-#include "hash_table.h"
+#include "dict_private.h"
 #include "tree_schema.h"
+#include "libyang.h"
 
 struct ly_modules_list {
     char **search_paths;
@@ -34,8 +31,11 @@ struct ly_modules_list {
     uint8_t parsing_sub_modules_count;
     uint8_t parsed_submodules_count;
     uint16_t module_set_id;
-    int flags; /* see @ref contextoptions. */
+    uint32_t flags;
 };
+
+#define LY_CTX_ALLIMPLEMENTED 0x01 /**< all modules are implemented despite they were loaded explicitly or implicitly
+                                        via import statement */
 
 struct ly_ctx {
     struct dict_table dict;
@@ -44,11 +44,6 @@ struct ly_ctx {
     void *imp_clb_data;
     ly_module_data_clb data_clb;
     void *data_clb_data;
-#ifdef LY_ENABLED_LYD_PRIV
-    void *(*priv_dup_clb)(const void *priv);
-#endif
-    pthread_key_t errlist_key;
-    uint8_t internal_module_count;
 };
 
 #endif /* LY_CONTEXT_H_ */

@@ -1,6 +1,6 @@
 var yang = require("./index")
 
-const ctx = new yang.Context("./files", 0);
-var module = ctx.parse_module_path("./files/b.yang", yang.LYS_IN_YANG);
+var ctx = yang.ly_ctx_new("./files");
+var module = yang.lys_parse_path(ctx, "./files/b.yang", yang.LYS_IN_YANG);
 
-console.log(module.name());
+console.log(module.name);
